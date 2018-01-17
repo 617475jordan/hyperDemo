@@ -188,35 +188,27 @@ def SimpleRecognizePlateByE2E(image):
         res,confidence = e2e.recognizeOne(image_rgb)
         print(res,confidence)
         res_set.append([[],res,confidence])
-        if len(res)>=7:
-           if confidence>0.4:
-              m_count=filterPlateNum(res)
-              if m_count==1:
-                 image = drawRectBox(image, rect, res)#+" "+str(round(confidence,3)))
-              else:
-                if len(resLen)<7:
-                   return image,res_set
-                m_count=filterPlateNum(resLen)
-                if m_count<=1:
-                   image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+        resLen = res
+        if len(res) >= 7:
+            if confidence > 0.4:
+                m_count = filterPlateNum(res)
+                if m_count == 1:
+                    image = drawRectBox(image, rect, res)  # +" "+str(round(confidence,3)))
                 else:
-                    return image,res_set
-           else:
-              if len(resLen)<7:
-                   return image,res_set
-              m_count=filterPlateNum(resLen)
-              if m_count<=1:
-                 image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
-              elif m_count>=2:
-                    return image,res_set
+                    if len(resLen) >= 7:
+                        m_count = filterPlateNum(resLen)
+                        if m_count <= 1:
+                            image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
+            else:
+                if len(resLen) >= 7:
+                    m_count = filterPlateNum(resLen)
+                    if m_count <= 1:
+                        image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
         else:
-            if len(resLen)<7:
-                return image,res_set
-            m_count=filterPlateNum(resLen)
-            if m_count<=1:
-                image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
-            elif m_count>=2:
-                return image,res_set
+            if len(resLen) >= 7:
+                m_count = filterPlateNum(resLen)
+                if m_count <= 1:
+                    image = drawRectBox(image, rect, resLen)
     return image,res_set
 
 def SimpleRecognizePlate(image):
@@ -241,6 +233,9 @@ def SimpleRecognizePlate(image):
         print(res, confidence)
         resLen = res
         success=-1
+        '''
+        先用e2e判断车牌
+        '''
         if len(res)>=7:
            if confidence>0.4:
               m_count=filterPlateNum(res)
@@ -265,10 +260,12 @@ def SimpleRecognizePlate(image):
                 if m_count<=1:
                    success=1
                    image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
-        print('success', success)
+        #print('success', success)
         if success==1:
             continue
-
+        '''
+        e2e判断车牌失败，使用深度框架keras和tensorflow识别
+        '''
         image_gray = cv2.cvtColor(image_rgb,cv2.COLOR_RGB2GRAY)
 
         # image_gray = horizontalSegmentation(image_gray)
@@ -278,37 +275,36 @@ def SimpleRecognizePlate(image):
         #cv2.imwrite("./"+str(j)+".jpg",image_gray)
         # cv2.imshow("image",image_gray)
         # cv2.waitKey(0)
-        print("校正",time.time() - t1,"s")
+        #print("校正",time.time() - t1,"s")
         # cv2.imshow("image,",image_gray)
         # cv2.waitKey(0)
-        t2 = time.time()
+        #t2 = time.time()
         val = segmentation.slidingWindowsEval(image_gray)
         # print val
-        print("分割和识别",time.time() - t2,"s")
+        #print("分割和识别",time.time() - t2,"s")
         if len(val)==3:
             blocks, res, confidence = val
-            if len(res)<7:
-                continue
-            if confidence/7>0.7:
-                image =  drawRectBox(image,rect,res)
-                res_set.append(res)
-                '''
-                for i,block in enumerate(blocks):
-
-                    block_ = cv2.resize(block,(25,25))
-                    block_ = cv2.cvtColor(block_,cv2.COLOR_GRAY2BGR)
-                    image[j * 25:(j * 25) + 25, i * 25:(i * 25) + 25] = block_
-                    if image[j*25:(j*25)+25,i*25:(i*25)+25].shape == block_.shape:
-                        pass
-                '''
-
-            if confidence>0:
-                print("车牌:",res,"置信度:",confidence/7)
+            resLen = res
+            if len(res) >= 7:
+                if confidence > 0.4:
+                    m_count = filterPlateNum(res)
+                    if m_count == 1:
+                        image = drawRectBox(image, rect, res)  # +" "+str(round(confidence,3)))
+                    else:
+                        if len(resLen) >= 7:
+                            m_count = filterPlateNum(resLen)
+                            if m_count <= 1:
+                                image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
+                else:
+                    if len(resLen) >= 7:
+                        m_count = filterPlateNum(resLen)
+                        if m_count <= 1:
+                            image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
             else:
-                pass
-
-                # print "不确定的车牌:", res, "置信度:", confidence
-
+                if len(resLen) >= 7:
+                    m_count = filterPlateNum(resLen)
+                    if m_count <= 1:
+                        image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
     print(time.time() - t0,"s")
     return image,res_set
 
