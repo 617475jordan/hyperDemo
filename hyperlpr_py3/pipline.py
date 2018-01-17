@@ -27,7 +27,13 @@ from . import e2e
 
 province = ["京", "沪", "津", "渝", "冀", "晋", "蒙", "辽", "吉", "黑", "苏", "浙", "皖", "闽", "赣", "鲁", "豫", "鄂", "湘", "粤", "桂",
              "琼", "川", "贵", "云", "藏", "陕", "甘", "青", "宁", "新"];
-
+'''
+special = ["京", "沪", "津", "渝", "冀", "晋", "蒙", "辽", "吉", "黑", "苏", "浙", "皖", "闽", "赣", "鲁", "豫", "鄂", "湘", "粤", "桂",
+             "琼", "川", "贵", "云", "藏", "陕", "甘", "青", "宁", "新", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A",
+             "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X",
+             "Y", "Z","港","学","使","警","澳","挂","军","北","南","广","沈","兰","成","济","海","民","航","空"
+             ];
+'''
 def find_edge(image):
     sum_i = image.sum(axis=0)
     sum_i =  sum_i.astype(np.float)
@@ -166,7 +172,7 @@ def SimpleRecognizePlateByE2E(image):
         # plate = cv2.cvtColor(plate, cv2.COLOR_RGB2GRAY)
         plate  =cv2.resize(plate,(136,36*2))
         res,confidence = e2e.recognizeOne(origin_plate)
-        originalImg=res;
+        resLen=res;
         print("res",res)
 
         t1 = time.time()
@@ -177,39 +183,38 @@ def SimpleRecognizePlateByE2E(image):
         image_rgb = fm.findContoursAndDrawBoundingBox(plate)
         image_rgb = fv.finemappingVertical(image_rgb)
         image_rgb = fv.finemappingVertical(image_rgb)
-        cache.verticalMappingToFolder(image_rgb)
+        #cache.verticalMappingToFolder(image_rgb)
         #cv2.imwrite("./"+str(j)+".jpg",image_rgb)
         res,confidence = e2e.recognizeOne(image_rgb)
         print(res,confidence)
         res_set.append([[],res,confidence])
-
         if len(res)>=7:
            if confidence>0.4:
               m_count=filterPlateNum(res)
               if m_count==1:
                  image = drawRectBox(image, rect, res)#+" "+str(round(confidence,3)))
               else:
-                if len(originalImg)<7:
+                if len(resLen)<7:
                    return image,res_set
-                m_count=filterPlateNum(originalImg)
+                m_count=filterPlateNum(resLen)
                 if m_count<=1:
-                   image = drawRectBox(image, rect, originalImg)#+" "+str(round(confidence,3)))
+                   image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
                 else:
                     return image,res_set
            else:
-              if len(originalImg)<7:
+              if len(resLen)<7:
                    return image,res_set
-              m_count=filterPlateNum(originalImg)
+              m_count=filterPlateNum(resLen)
               if m_count<=1:
-                 image = drawRectBox(image, rect, originalImg)#+" "+str(round(confidence,3)))
+                 image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
               elif m_count>=2:
                     return image,res_set
         else:
-            if len(originalImg)<7:
+            if len(resLen)<7:
                 return image,res_set
-            m_count=filterPlateNum(originalImg)
+            m_count=filterPlateNum(resLen)
             if m_count<=1:
-               image = drawRectBox(image, rect, originalImg)#+" "+str(round(confidence,3)))
+                image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
             elif m_count>=2:
                 return image,res_set
     return image,res_set
@@ -229,10 +234,41 @@ def SimpleRecognizePlate(image):
             plate = cv2.bitwise_not(plate)
 
         image_rgb = fm.findContoursAndDrawBoundingBox(plate)
-
         image_rgb = fv.finemappingVertical(image_rgb)
-        cache.verticalMappingToFolder(image_rgb)
-        print("e2e:", e2e.recognizeOne(image_rgb))
+        #cache.verticalMappingToFolder(image_rgb)
+        #print("e2e:", e2e.recognizeOne(image_rgb))
+        res, confidence = e2e.recognizeOne(image_rgb)
+        print(res, confidence)
+        resLen = res
+        success=-1
+        if len(res)>=7:
+           if confidence>0.4:
+              m_count=filterPlateNum(res)
+              if m_count==1:
+                 success=1
+                 image = drawRectBox(image, rect, res)#+" "+str(round(confidence,3)))
+              else:
+                if len(resLen)>=7:
+                    m_count=filterPlateNum(resLen)
+                    if m_count<=1:
+                       success=1
+                       image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+           else:
+              if len(resLen)>=7:
+                  m_count=filterPlateNum(resLen)
+                  if m_count<=1:
+                     success=1
+                     image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+        else:
+            if len(resLen)>=7:
+                m_count=filterPlateNum(resLen)
+                if m_count<=1:
+                   success=1
+                   image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+        print('success', success)
+        if success==1:
+            continue
+
         image_gray = cv2.cvtColor(image_rgb,cv2.COLOR_RGB2GRAY)
 
         # image_gray = horizontalSegmentation(image_gray)
@@ -251,9 +287,12 @@ def SimpleRecognizePlate(image):
         print("分割和识别",time.time() - t2,"s")
         if len(val)==3:
             blocks, res, confidence = val
+            if len(res)<7:
+                continue
             if confidence/7>0.7:
                 image =  drawRectBox(image,rect,res)
                 res_set.append(res)
+                '''
                 for i,block in enumerate(blocks):
 
                     block_ = cv2.resize(block,(25,25))
@@ -261,7 +300,7 @@ def SimpleRecognizePlate(image):
                     image[j * 25:(j * 25) + 25, i * 25:(i * 25) + 25] = block_
                     if image[j*25:(j*25)+25,i*25:(i*25)+25].shape == block_.shape:
                         pass
-
+                '''
 
             if confidence>0:
                 print("车牌:",res,"置信度:",confidence/7)
@@ -274,15 +313,28 @@ def SimpleRecognizePlate(image):
     return image,res_set
 
 
-def filterPlateNum(originalImg):
+def filterPlateNum(resLen):
     m_count=0
-    for k0 in range(len(originalImg)):
+    ###############
+    '''
+    初步只考虑普通车牌
+    '''
+    for k1 in range(len(province)):
+        if province[k1]==resLen[0]:
+            m_count+=1
+    if m_count==0:
+       m_count=2
+       return m_count
+    '''
+     考虑中间其他汉字
+    '''
+    for k0 in range(1,len(resLen)):
                 for k1 in range(len(province)):
-                    if province[k1]==originalImg[k0]:
+                    if province[k1]==resLen[k0]:
                         m_count +=1
                         if k0>=1:
                            m_count=2
                     if m_count>=2:
                         return m_count
-    return m_count
 
+    return m_count
