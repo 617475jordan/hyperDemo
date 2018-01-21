@@ -211,15 +211,17 @@ def SimpleRecognizePlateByE2E(image):
                     image = drawRectBox(image, rect, resLen)
     return image,res_set
 
-def SimpleRecognizePlate(image):
-    t0 = time.time()
+def SimpleRecognizePlate(image,file_name):
+
     images = detect.detectPlateRough(image,image.shape[0],top_bottom_padding_rate=0.1)
     res_set = []
+    flag = -1
+
     for j,plate in enumerate(images):
         plate, rect, origin_plate  =plate
         # plate = cv2.cvtColor(plate, cv2.COLOR_RGB2GRAY)
         plate  =cv2.resize(plate,(136,36*2))
-        t1 = time.time()
+        #t1 = time.time()
 
         ptype = td.SimplePredict(plate)
         if ptype>0 and ptype<5:
@@ -231,13 +233,19 @@ def SimpleRecognizePlate(image):
         #print("e2e:", e2e.recognizeOne(image_rgb))
         res, confidence = e2e.recognizeOne(image_rgb)
         print(res, confidence)
+
+        #print(res+'.jpg')
+        if res+'.jpg'==file_name:
+            flag=1
         resLen = res
         success=-1
         '''
         先用e2e判断车牌
         '''
+        minConfidence=0.6
+        maxConfidence=4
         if len(res)>=7:
-           if confidence>0.4:
+           if confidence>=minConfidence:
               m_count=filterPlateNum(res)
               if m_count==1:
                  success=1
@@ -285,28 +293,35 @@ def SimpleRecognizePlate(image):
         if len(val)==3:
             blocks, res, confidence = val
             resLen = res
+            #print(res + '.jpg')
+            if res + '.jpg' == file_name:
+                flag = 1
             if len(res) >= 7:
-                if confidence > 0.4:
+                if confidence >=minConfidence:
                     m_count = filterPlateNum(res)
                     if m_count == 1:
                         image = drawRectBox(image, rect, res)  # +" "+str(round(confidence,3)))
+                        print(res)
                     else:
                         if len(resLen) >= 7:
                             m_count = filterPlateNum(resLen)
                             if m_count <= 1:
-                                image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
+                                image = drawRectBox(image, rect, resLen)
+                                print(resLen)# +" "+str(round(confidence,3)))
                 else:
                     if len(resLen) >= 7:
                         m_count = filterPlateNum(resLen)
                         if m_count <= 1:
-                            image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
+                            image = drawRectBox(image, rect, resLen)
+                            print(resLen)  # +" "+str(round(confidence,3)))
             else:
                 if len(resLen) >= 7:
                     m_count = filterPlateNum(resLen)
                     if m_count <= 1:
-                        image = drawRectBox(image, rect, resLen)  # +" "+str(round(confidence,3)))
-    print(time.time() - t0,"s")
-    return image,res_set
+                        image = drawRectBox(image, rect, resLen)
+                        print(resLen)  # +" "+str(round(confidence,3)))
+
+    return image,res_set,flag
 
 
 def filterPlateNum(resLen):
