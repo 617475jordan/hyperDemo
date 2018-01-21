@@ -6,33 +6,38 @@ import time
 import numpy as np
 
 def cv_imread(img_path):
-    cv_img=cv2.imdecode(np.fromfile(img_path,dtype=np.uint8),-1)
+    path =np.fromfile(img_path,dtype=np.uint8)
+    #print(u'vgygy'+path)
+    cv_img=cv2.imdecode(path,-1)
     return cv_img
 
 if __name__ == '__main__':
-    FindPath = 'F:\\NI\\Materials\\license\\new\\粤BD'
+    FindPath = 'license//湘'
 
     FileNames = os.listdir(FindPath)
     count=0
+    success=0
     for file_name in FileNames:
         t0 = time.time()
         fullfilename=os.path.join(FindPath,file_name)
-        image = cv_imread(fullfilename)
+        #print(file_name)
+        image= cv_imread(fullfilename)
         sp = image.shape
 
         sz1 = sp[0]#height(rows) of image
         sz2 = sp[1]#width(colums) of image
         #print(sz1,sz2)
-        image,res  = pp.SimpleRecognizePlate(image)
+        image,res,flag  = pp.SimpleRecognizePlate(image,file_name)
+        if flag==1:
+            success=success+1
         out=image
         if(sz2>1280):
             out=cv2.resize(image,(int(sz2*2.0/4.0),int(sz1*2.0/4.0)),interpolation=cv2.INTER_AREA)
         count = count + 1
-        print('current id:%d'%count)
         print(time.time() - t0,"s")
-        cv2.imshow(file_name,out)
+        cv2.imshow(str(count)+'.jpg',out)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+    print('result:%.1f'%(success/count*100))
+    print('success:%d'%success)
     print ('total image is:%d'%count)
-
-
