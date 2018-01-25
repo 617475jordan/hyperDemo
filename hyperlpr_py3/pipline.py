@@ -189,6 +189,8 @@ def SimpleRecognizePlateByE2E(image):
         print(res,confidence)
         res_set.append([[],res,confidence])
         resLen = res
+
+
         if len(res) >= 7:
             if confidence > 0.4:
                 m_count = filterPlateNum(res)
@@ -211,69 +213,112 @@ def SimpleRecognizePlateByE2E(image):
                     image = drawRectBox(image, rect, resLen)
     return image,res_set
 
+
 def SimpleRecognizePlate(image,file_name):
 
     images = detect.detectPlateRough(image,image.shape[0],top_bottom_padding_rate=0.1)
     res_set = []
     flag = -1
-
+    result =[[0 for col in range(2)] for row in range(20)]
+    m_num=0
     for j,plate in enumerate(images):
+
         plate, rect, origin_plate  =plate
         # plate = cv2.cvtColor(plate, cv2.COLOR_RGB2GRAY)
         plate  =cv2.resize(plate,(136,36*2))
-        #t1 = time.time()
+        res,confidence = e2e.recognizeOne(origin_plate)
+
+        if len(res)>=7:
+            if res + '.jpg' == file_name:
+               flag = 1
+            if filterPlateNum(res)<=1:
+               result[m_num][0] = res
+               result[m_num][1]=confidence
+            m_num=m_num+1
 
         ptype = td.SimplePredict(plate)
         if ptype>0 and ptype<5:
+            # pass
             plate = cv2.bitwise_not(plate)
-
         image_rgb = fm.findContoursAndDrawBoundingBox(plate)
         image_rgb = fv.finemappingVertical(image_rgb)
+        image_rgb = fv.finemappingVertical(image_rgb)
         #cache.verticalMappingToFolder(image_rgb)
-        #print("e2e:", e2e.recognizeOne(image_rgb))
-        res, confidence = e2e.recognizeOne(image_rgb)
-        print(res, confidence)
-
-        #print(res+'.jpg')
-        if res+'.jpg'==file_name:
-            flag=1
-        resLen = res
-        success=-1
+        #cv2.imwrite("./"+str(j)+".jpg",image_rgb)
+        res,confidence = e2e.recognizeOne(image_rgb)
+        #resLen = res
+        #success=-1
         '''
         先用e2e判断车牌
         '''
-        minConfidence=0.6
-        maxConfidence=4
+        #minConfidence=0.7
+        #maxConfidence=4
+
         if len(res)>=7:
-           if confidence>=minConfidence:
+            if res + '.jpg' == file_name:
+               flag = 1
+            if filterPlateNum(res)<=1:
+               result[m_num][0] = res
+               result[m_num][1]=confidence
+            m_num=m_num+1
+        image_gray = cv2.cvtColor(image_rgb,cv2.COLOR_RGB2GRAY)
+        # image_gray = horizontalSegmentation(image_gray)
+        cv2.imshow(str(m_num)+'.jpg',image_gray)
+
+        val = segmentation.slidingWindowsEval(image_gray)
+        if len(val)==3:
+            blocks, res, confidence = val
+            #resLen = res
+            print(res, confidence)
+            #print(res + '.jpg')
+
+            if len(res) >= 7:
+               if res + '.jpg' == file_name:
+                  flag = 1
+               if filterPlateNum(res)<=1:
+                  result[m_num][0] = res
+                  result[m_num][1]=confidence
+                  m_num=m_num+1
+        '''
+        if len(res)>=7:
+
+           if confidence/7>=minConfidence:
               m_count=filterPlateNum(res)
               if m_count==1:
                  success=1
                  image = drawRectBox(image, rect, res)#+" "+str(round(confidence,3)))
+                 result[m_num][0] = res
+                 result[m_num][1]=confidence
               else:
                 if len(resLen)>=7:
                     m_count=filterPlateNum(resLen)
                     if m_count<=1:
                        success=1
                        image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+                       result[m_num][0] = res
+                       result[m_num][1]=confidence
            else:
               if len(resLen)>=7:
                   m_count=filterPlateNum(resLen)
                   if m_count<=1:
                      success=1
                      image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+                     result[m_num][0] = res
+                     result[m_num][1]=confidence
         else:
             if len(resLen)>=7:
                 m_count=filterPlateNum(resLen)
                 if m_count<=1:
                    success=1
                    image = drawRectBox(image, rect, resLen)#+" "+str(round(confidence,3)))
+                   result[m_num][0] = res
+                   result[m_num][1]=confidence
         #print('success', success)
         if success==1:
             continue
-        '''
-        e2e判断车牌失败，使用深度框架keras和tensorflow识别
-        '''
+
+         #e2e判断车牌失败，使用深度框架keras和tensorflow识别
+
         image_gray = cv2.cvtColor(image_rgb,cv2.COLOR_RGB2GRAY)
 
         # image_gray = horizontalSegmentation(image_gray)
@@ -293,35 +338,55 @@ def SimpleRecognizePlate(image,file_name):
         if len(val)==3:
             blocks, res, confidence = val
             resLen = res
+            print(res, confidence)
             #print(res + '.jpg')
             if res + '.jpg' == file_name:
                 flag = 1
             if len(res) >= 7:
-                if confidence >=minConfidence:
+                if confidence/7 >=minConfidence:
                     m_count = filterPlateNum(res)
                     if m_count == 1:
                         image = drawRectBox(image, rect, res)  # +" "+str(round(confidence,3)))
-                        print(res)
+                        result[m_num][0] = res
+                        result[m_num][1]=confidence
+                        #print(res)
                     else:
                         if len(resLen) >= 7:
                             m_count = filterPlateNum(resLen)
                             if m_count <= 1:
                                 image = drawRectBox(image, rect, resLen)
-                                print(resLen)# +" "+str(round(confidence,3)))
+                                #print(resLen)# +" "+str(round(confidence,3)))
+                                result[m_num][0] = res
+                                result[m_num][1]=confidence
                 else:
                     if len(resLen) >= 7:
                         m_count = filterPlateNum(resLen)
                         if m_count <= 1:
                             image = drawRectBox(image, rect, resLen)
-                            print(resLen)  # +" "+str(round(confidence,3)))
+                            result[m_num][0] = res
+                            result[m_num][1]=confidence
+                            #print(resLen)  # +" "+str(round(confidence,3)))
             else:
                 if len(resLen) >= 7:
                     m_count = filterPlateNum(resLen)
                     if m_count <= 1:
                         image = drawRectBox(image, rect, resLen)
-                        print(resLen)  # +" "+str(round(confidence,3)))
+                        result[m_num][0] = res
+                        result[m_num][1]=confidence
+                        #print(resLen)  # +" "+str(round(confidence,3)))
+        '''
+    currentResult=[[0 for col in range(2)] for row in range(5)]
+    for i in range(0,m_num):
+        for j in range(i,m_num):
+            if(result[j][1]>result[i][1]):
+                 tmp = result[j]
+                 result[j]=result[i]
+                 result[i] = tmp
+        if i>=5:
+            break
+        currentResult[i] =result[i]
 
-    return image,res_set,flag
+    return image,res_set,flag,currentResult
 
 
 def filterPlateNum(resLen):
